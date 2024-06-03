@@ -11,6 +11,9 @@ class AExistsUETestGameMode : public AGameModeBase
 
 public:
 	AExistsUETestGameMode();
+
+	virtual void PostLogin(APlayerController* NewPlayer) override;
+
 };
 
 

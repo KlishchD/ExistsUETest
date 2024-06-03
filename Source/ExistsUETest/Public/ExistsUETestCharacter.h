@@ -12,10 +12,13 @@ class UInputAction;
 class UInputMappingContext;
 struct FInputActionValue;
 class UTP_WeaponComponent;
+class UExistsUETestWidgetComponent;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeath);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnHealthChanged, float);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerNameChanged, const FString&);
 
 UCLASS(config=Game)
 class AExistsUETestCharacter : public ACharacter
@@ -34,15 +37,25 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	bool GetHasRifle();
 
+	float GetMaxHealth() const { return MaxHealth; }
+
 	float GetHealth() const { return Health; }
 	void Heal(float Amount);
 
+	void PullPlayerName();
+
 	FOnDeath& GetOnDeath() { return OnDeath; }
+	FOnHealthChanged& GetOnHealthChanged() { return OnHealthChanged; }
+	FOnPlayerNameChanged& GetOnPlayerNameChanged() { return OnPlayerNameChanged; }
 
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, class AActor* DamageCauser) override;
 
 	UFUNCTION(Server, Reliable)
 	void ServerFire();
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	const FString& GetPlayerName() const { return PlayerName; }
 
 protected:
 	virtual void BeginPlay() override;
@@ -56,11 +69,23 @@ protected:
 
 	void ApplyRegularDamage();
 
+	void SetHealth(float InHealth);
+
 	UFUNCTION()
 	void OnCharacterDeath();
 
-	void SetHealth(float InHealth);
+	UFUNCTION()
+	void OnPlayerNameReplicated();
 
+	UFUNCTION()
+	void OnHealthReplicated();
+
+	UFUNCTION(Client, Reliable)
+	void ClientSetPlayerName();
+
+	UFUNCTION(Server, Reliable)
+	void ServerSetPlayerName(const FString& NewPlayerName);
+	
 protected:
 	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
 	TObjectPtr<USkeletalMeshComponent> Mesh1P;
@@ -83,6 +108,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
 	TObjectPtr<UTP_WeaponComponent> Weapon;
 
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UExistsUETestWidgetComponent> PlayerInformationWidgetComponent;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "General")
 	float MaxHealth = 100.0f;
 
@@ -92,9 +120,15 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "General", meta = (Tooltip = "In Seconds"))
 	float RegularDamageInterval = 10.0f;
 
-	FOnDeath OnDeath;
+	UPROPERTY(Replicated, ReplicatedUsing = OnPlayerNameReplicated)
+	FString PlayerName;
 
+	UPROPERTY(Replicated, ReplicatedUsing = OnHealthReplicated)
 	float Health;
+
+	FOnDeath OnDeath;
+	FOnHealthChanged OnHealthChanged;
+	FOnPlayerNameChanged OnPlayerNameChanged;
 
 	FTimerHandle RegularDamageHandler;
 };

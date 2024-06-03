@@ -9,13 +9,19 @@
 #include "InputActionValue.h"
 #include "Engine/LocalPlayer.h"
 #include "TP_WeaponComponent.h"
+#include "ExistsUETestWidgetComponent.h"
+#include "ExistsUETestGameInstance.h"
+#include "Net/UnrealNetwork.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/GameplayStatics.h"
+#include "Widget/PlayerInformationWidget.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
 AExistsUETestCharacter::AExistsUETestCharacter()
 {	
 	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
-		
+	
 	FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
 	FirstPersonCameraComponent->SetupAttachment(GetCapsuleComponent());
 	FirstPersonCameraComponent->SetRelativeLocation(FVector(-10.f, 0.f, 60.f));
@@ -31,11 +37,21 @@ AExistsUETestCharacter::AExistsUETestCharacter()
 	bReplicates = true;
 
 	SetCanBeDamaged(true);
+
+	PlayerInformationWidgetComponent = CreateDefaultSubobject<UExistsUETestWidgetComponent>(TEXT("WidgetComponent"));
+	PlayerInformationWidgetComponent->SetupAttachment(RootComponent);
+
+	PlayerInformationWidgetComponent->SetDisplayOnOwner(false);
 }
 
 void AExistsUETestCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (UPlayerInformationWidget* PlayerInformationWidget = PlayerInformationWidgetComponent->GetCastedWidget<UPlayerInformationWidget>())
+	{
+		PlayerInformationWidget->SetCharacter(this);
+	}
 
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
 	{
@@ -48,6 +64,8 @@ void AExistsUETestCharacter::BeginPlay()
 	GetWorld()->GetTimerManager().SetTimer(RegularDamageHandler, this, &ThisClass::ApplyRegularDamage, RegularDamageInterval, true);
 
 	OnDeath.AddDynamic(this, &ThisClass::OnCharacterDeath);
+
+	Health = MaxHealth;
 }
 
 void AExistsUETestCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -82,16 +100,45 @@ void AExistsUETestCharacter::ApplyRegularDamage()
 
 void AExistsUETestCharacter::OnCharacterDeath()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, TEXT("Player has died"));
+	GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, FString::Printf(TEXT("%s has died %d"), *PlayerName, UKismetSystemLibrary::IsServer(this)));
+}
+
+void AExistsUETestCharacter::OnPlayerNameReplicated()
+{
+	OnPlayerNameChanged.Broadcast(PlayerName);
+}
+
+void AExistsUETestCharacter::OnHealthReplicated()
+{
+	OnHealthChanged.Broadcast(Health);
+}
+
+void AExistsUETestCharacter::ClientSetPlayerName_Implementation()
+{
+	UExistsUETestGameInstance* GameInstance = GetGameInstance<UExistsUETestGameInstance>();
+	ServerSetPlayerName(GameInstance->GetPlayerName());
+}
+
+void AExistsUETestCharacter::ServerSetPlayerName_Implementation(const FString& NewPlayerName)
+{
+	PlayerName = NewPlayerName;
+	OnPlayerNameChanged.Broadcast(PlayerName);
 }
 
 void AExistsUETestCharacter::SetHealth(float InHealth)
 {
-	Health = FMath::Clamp(InHealth, 0.0f, MaxHealth);
+	InHealth = FMath::Clamp(InHealth, 0.0f, MaxHealth);
 
-	if (Health <= 0.0f)
+	if (InHealth != Health)
 	{
-		OnDeath.Broadcast();
+		Health = InHealth;
+
+		OnHealthChanged.Broadcast(Health);
+
+		if (Health <= 0.0f)
+		{
+			OnDeath.Broadcast();
+		}
 	}
 }
 
@@ -132,6 +179,11 @@ void AExistsUETestCharacter::Heal(float Amount)
 	SetHealth(Health + Amount);
 }
 
+void AExistsUETestCharacter::PullPlayerName()
+{
+	ClientSetPlayerName();
+}
+
 float AExistsUETestCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, class AActor* DamageCauser)
 {
 	SetHealth(Health - DamageAmount);
@@ -145,4 +197,12 @@ void AExistsUETestCharacter::ServerFire_Implementation()
 	{
 		Weapon->ServerFire();
 	}
+}
+
+void AExistsUETestCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AExistsUETestCharacter, PlayerName);
+	DOREPLIFETIME(AExistsUETestCharacter, Health);
 }

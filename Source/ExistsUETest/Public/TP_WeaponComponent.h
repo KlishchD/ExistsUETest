@@ -5,6 +5,8 @@
 #include "TP_WeaponComponent.generated.h"
 
 class AExistsUETestCharacter;
+class UInputAction;
+class UInputMappingContext;
 
 UCLASS(Blueprintable, BlueprintType, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class EXISTSUETEST_API UTP_WeaponComponent : public USkeletalMeshComponent
@@ -37,19 +39,20 @@ protected:
 	TSubclassOf<class AExistsUETestProjectile> ProjectileClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Gameplay)
-	USoundBase* FireSound;
+	TObjectPtr<USoundBase> FireSound;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
-	UAnimMontage* FireAnimation;
+	TObjectPtr<UAnimMontage> FireAnimation;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Gameplay)
 	FVector MuzzleOffset;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	class UInputMappingContext* FireMappingContext;
+	TObjectPtr<UInputMappingContext> FireMappingContext;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	class UInputAction* FireAction;
+	TObjectPtr<UInputAction> FireAction;
 
-	AExistsUETestCharacter* Character;
+	UPROPERTY()
+	TObjectPtr<AExistsUETestCharacter> Character;
 };

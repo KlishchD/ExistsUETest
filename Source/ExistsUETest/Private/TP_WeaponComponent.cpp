@@ -62,7 +62,7 @@ void UTP_WeaponComponent::ClientAttachWeapon_Implementation(AExistsUETestCharact
 
 		if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent))
 		{
-			EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, Character, &AExistsUETestCharacter::ServerFire);
+			EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, Character.Get(), &AExistsUETestCharacter::ServerFire);
 		}
 	}
 }
