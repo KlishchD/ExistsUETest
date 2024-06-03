@@ -1,0 +1,5 @@
+#include "ExistsUETestDelegates.h"
+
+FExistsUETestDelegates::FOnPlayerKilled FExistsUETestDelegates::OnPlayerKilled;
+FExistsUETestDelegates::FOnPlayerHit FExistsUETestDelegates::OnPlayerHit;
+FExistsUETestDelegates::FOnDemonstrateTopScores FExistsUETestDelegates::OnDemonstrateTopScores;

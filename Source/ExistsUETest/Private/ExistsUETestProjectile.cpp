@@ -1,5 +1,6 @@
 #include "ExistsUETestProjectile.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Components/SphereComponent.h"
 
 AExistsUETestProjectile::AExistsUETestProjectile() 
@@ -28,10 +29,20 @@ AExistsUETestProjectile::AExistsUETestProjectile()
 
 void AExistsUETestProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-	if ((OtherActor != nullptr) && (OtherActor != this) && (OtherComp != nullptr) && OtherComp->IsSimulatingPhysics())
+	if (OtherActor)
 	{
-		OtherComp->AddImpulseAtLocation(GetVelocity() * 100.0f, GetActorLocation());
+		APawn* Pawn = GetOwner<APawn>();
+		if (Pawn != OtherActor)
+		{
+			AController* Controller = Pawn->GetController();
+			UGameplayStatics::ApplyDamage(OtherActor, DamageAmount, Controller, Pawn, UDamageType::StaticClass());
+		}
 
-		Destroy();
+		if ((OtherActor != this) && OtherComp && OtherComp->IsSimulatingPhysics())
+		{
+			OtherComp->AddImpulseAtLocation(GetVelocity() * 100.0f, GetActorLocation());
+
+			Destroy();
+		}
 	}
 }

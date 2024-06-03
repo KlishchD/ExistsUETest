@@ -6,12 +6,20 @@
 #include "Kismet/GameplayStatics.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Net/UnrealNetwork.h"
 
 UTP_WeaponComponent::UTP_WeaponComponent()
 {
 	MuzzleOffset = FVector(100.0f, 0.0f, 10.0f);
 
 	SetIsReplicatedByDefault(true);
+}
+
+void UTP_WeaponComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UTP_WeaponComponent, Character);
 }
 
 void UTP_WeaponComponent::ServerAttachWeapon_Implementation(AExistsUETestCharacter* TargetCharacter)
@@ -85,6 +93,7 @@ void UTP_WeaponComponent::ServerFire_Implementation()
 
 			FActorSpawnParameters ActorSpawnParams;
 			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+			ActorSpawnParams.Owner = Character;
 
 			World->SpawnActor<AExistsUETestProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
 		}

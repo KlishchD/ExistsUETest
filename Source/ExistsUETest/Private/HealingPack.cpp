@@ -1,57 +1,32 @@
 #include "HealingPack.h"
+#include "ExistsUETestCharacter.h"
 
 AHealingPack::AHealingPack()
 {
-	PrimaryActorTick.bCanEverTick = true;
-
-	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
-
-	PickUpComponent = CreateDefaultSubobject<UTP_PickUpComponent>(TEXT("PickUpComponent"));
-	PickUpComponent->SetupAttachment(RootComponent);
-
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
 	MeshComponent->SetupAttachment(RootComponent);
 
-	MeshComponent->SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
-
-	bReplicates = true;
+	MeshComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
 }
 
-void AHealingPack::BeginPlay()
+void AHealingPack::ActivatePickUp()
 {
-	Super::BeginPlay();
-	
-	PickUpComponent->GetOnPickUp().AddDynamic(this, &ThisClass::OnPickUp);
+	Super::ActivatePickUp();
+
+	SetActorHiddenInGame(false);
 }
 
-void AHealingPack::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void AHealingPack::DeactivatePickUp()
 {
-	Super::EndPlay(EndPlayReason);
-
-	PickUpComponent->GetOnPickUp().RemoveAll(this);
-	GetWorld()->GetTimerManager().ClearTimer(ReactivationTimerHandle);
-}
-
-void AHealingPack::OnPickUp(AExistsUETestCharacter* PickUpCharacter)
-{
-	float HealAmount = FMath::RandRange(MinHealthRegenerationAmount, MaxHealthRegenerationAmount);
-	PickUpCharacter->Heal(HealAmount);
-
-	float ReactivationRate = FMath::RandRange(MinReactivationTime, MaxReactivationTime);
-	GetWorld()->GetTimerManager().SetTimer(ReactivationTimerHandle, this, &ThisClass::Reactivate, ReactivationRate);
+	Super::DeactivatePickUp();
 
 	SetActorHiddenInGame(true);
 }
 
-void AHealingPack::Reactivate()
+void AHealingPack::OnPickUp(AExistsUETestCharacter* PickUpCharacter)
 {
-	PickUpComponent->Activate();
-	SetActorHiddenInGame(false);
+	Super::OnPickUp(PickUpCharacter);
+
+	float HealAmount = FMath::RandRange(MinHealthRegenerationAmount, MaxHealthRegenerationAmount);
+	PickUpCharacter->Heal(HealAmount);
 }
-
-void AHealingPack::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}
-

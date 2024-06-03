@@ -2,32 +2,25 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "TP_PickUpComponent.h"
+#include "BasePickUpActor.h"
 #include "HealingPack.generated.h"
 
 UCLASS()
-class EXISTSUETEST_API AHealingPack : public AActor
+class EXISTSUETEST_API AHealingPack : public ABasePickUpActor
 {
 	GENERATED_BODY()
 	
 public:	
 	AHealingPack();
 
-	virtual void Tick(float DeltaTime) override;
+	virtual void ActivatePickUp() override;
+	virtual void DeactivatePickUp() override;
 
 protected:
-	virtual void BeginPlay() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
 	UFUNCTION()
-	void OnPickUp(AExistsUETestCharacter* PickUpCharacter);
-
-	void Reactivate();
+	virtual void OnPickUp(AExistsUETestCharacter* PickUpCharacter) override;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<UTP_PickUpComponent> PickUpComponent;
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
 
@@ -36,12 +29,4 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Healing")
 	float MaxHealthRegenerationAmount = 100.0f;
-
-	UPROPERTY(EditAnywhere, Category = "General")
-	float MinReactivationTime = 10.0f;
-
-	UPROPERTY(EditAnywhere, Category = "General")
-	float MaxReactivationTime = 10.0f;
-
-	FTimerHandle ReactivationTimerHandle;
 };

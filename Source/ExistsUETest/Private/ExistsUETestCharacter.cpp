@@ -15,6 +15,8 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "Widget/PlayerInformationWidget.h"
+#include "ExistsUETestDelegates.h"
+#include "Subsytems/ScoreSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -63,7 +65,7 @@ void AExistsUETestCharacter::BeginPlay()
 
 	GetWorld()->GetTimerManager().SetTimer(RegularDamageHandler, this, &ThisClass::ApplyRegularDamage, RegularDamageInterval, true);
 
-	OnDeath.AddDynamic(this, &ThisClass::OnCharacterDeath);
+	OnDeath.AddUObject(this, &ThisClass::OnCharacterDeath);
 
 	Health = MaxHealth;
 }
@@ -73,7 +75,13 @@ void AExistsUETestCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 
 	OnDeath.RemoveAll(this);
+	
 	GetWorld()->GetTimerManager().ClearTimer(RegularDamageHandler);
+
+	if (UScoreSubsystem* ScoreSubsystem = GetWorld()->GetSubsystem<UScoreSubsystem>())
+	{
+		ScoreSubsystem->AddLogEntry(this);
+	}
 }
 
 void AExistsUETestCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -95,12 +103,17 @@ void AExistsUETestCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 
 void AExistsUETestCharacter::ApplyRegularDamage()
 {
-	SetHealth(Health - RegularDamage);
+	UGameplayStatics::ApplyDamage(this, RegularDamage, GetController(), nullptr, UDamageType::StaticClass());
 }
 
 void AExistsUETestCharacter::OnCharacterDeath()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, FString::Printf(TEXT("%s has died %d"), *PlayerName, UKismetSystemLibrary::IsServer(this)));
+	GetWorld()->GetTimerManager().ClearTimer(RegularDamageHandler);
+
+	if (UScoreSubsystem* ScoreSubsystem = GetWorld()->GetSubsystem<UScoreSubsystem>())
+	{
+		ClientDemonstarateScores(ScoreSubsystem->GetTopEntries());
+	}
 }
 
 void AExistsUETestCharacter::OnPlayerNameReplicated()
@@ -125,19 +138,37 @@ void AExistsUETestCharacter::ServerSetPlayerName_Implementation(const FString& N
 	OnPlayerNameChanged.Broadcast(PlayerName);
 }
 
+void AExistsUETestCharacter::ClientDemonstarateScores_Implementation(const TArray<FLogEntry>& Entries)
+{
+	APlayerController* PlayerController = GetController<APlayerController>();
+	PlayerController->SetInputMode(FInputModeUIOnly());
+	PlayerController->SetShowMouseCursor(true);
+
+	FExistsUETestDelegates::OnDemonstrateTopScores.Broadcast(Entries);
+}
+
+void AExistsUETestCharacter::AddScore(float Score)
+{
+	CurrentScore += Score;
+}
+
 void AExistsUETestCharacter::SetHealth(float InHealth)
 {
-	InHealth = FMath::Clamp(InHealth, 0.0f, MaxHealth);
-
-	if (InHealth != Health)
+	if (!bIsDead)
 	{
-		Health = InHealth;
+		InHealth = FMath::Clamp(InHealth, 0.0f, MaxHealth);
 
-		OnHealthChanged.Broadcast(Health);
-
-		if (Health <= 0.0f)
+		if (InHealth != Health)
 		{
-			OnDeath.Broadcast();
+			Health = InHealth;
+
+			OnHealthChanged.Broadcast(Health);
+
+			if (Health <= 0.0f)
+			{
+				bIsDead = true;
+				OnDeath.Broadcast();
+			}
 		}
 	}
 }
@@ -186,9 +217,24 @@ void AExistsUETestCharacter::PullPlayerName()
 
 float AExistsUETestCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, class AActor* DamageCauser)
 {
-	SetHealth(Health - DamageAmount);
+	if (!bIsDead)
+	{
+		SetHealth(Health - DamageAmount);
 
-	return DamageAmount;
+		if (AExistsUETestCharacter* Character = Cast<AExistsUETestCharacter>(DamageCauser))
+		{
+			FExistsUETestDelegates::OnPlayerHit.Broadcast(this, Character);
+
+			if (bIsDead)
+			{
+				FExistsUETestDelegates::OnPlayerKilled.Broadcast(this, Character);
+			}
+		}
+
+		return DamageAmount;
+	}
+	
+	return 0.0f;
 }
 
 void AExistsUETestCharacter::ServerFire_Implementation()

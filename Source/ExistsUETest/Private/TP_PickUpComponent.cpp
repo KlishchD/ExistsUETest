@@ -8,34 +8,14 @@ UTP_PickUpComponent::UTP_PickUpComponent()
 	SetIsReplicatedByDefault(true);
 }
 
-void UTP_PickUpComponent::Activate()
+void UTP_PickUpComponent::ActivatePickUp()
 {
-	if (UKismetSystemLibrary::IsServer(this))
-	{
-		OnComponentBeginOverlap.AddDynamic(this, &UTP_PickUpComponent::OnSphereBeginOverlap);
-	}
+	OnComponentBeginOverlap.AddDynamic(this, &UTP_PickUpComponent::OnSphereBeginOverlap);
 }
 
-void UTP_PickUpComponent::Deactivate()
+void UTP_PickUpComponent::DeactivatePickUp()
 {
-	if (UKismetSystemLibrary::IsServer(this))
-	{
-		OnComponentBeginOverlap.RemoveAll(this);
-	}
-}
-
-void UTP_PickUpComponent::BeginPlay()
-{
-	Super::BeginPlay();
-
-	Activate();
-}
-
-void UTP_PickUpComponent::EndPlay(const EEndPlayReason::Type Reason)
-{
-	Super::EndPlay(Reason);
-
-	Deactivate();
+	OnComponentBeginOverlap.RemoveAll(this);
 }
 
 void UTP_PickUpComponent::OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -45,6 +25,6 @@ void UTP_PickUpComponent::OnSphereBeginOverlap(UPrimitiveComponent* OverlappedCo
 	{
 		OnPickUp.Broadcast(Character);
 
-		Deactivate();
+		DeactivatePickUp();
 	}
 }

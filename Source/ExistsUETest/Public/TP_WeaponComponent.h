@@ -16,6 +16,8 @@ class EXISTSUETEST_API UTP_WeaponComponent : public USkeletalMeshComponent
 public:
 	UTP_WeaponComponent();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	UFUNCTION(NetMulticast, Reliable, BlueprintCallable, Category = "Weapon")
 	void ServerAttachWeapon(AExistsUETestCharacter* TargetCharacter);
 
@@ -53,6 +55,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> FireAction;
 
-	UPROPERTY()
+	UPROPERTY(Replicated)
 	TObjectPtr<AExistsUETestCharacter> Character;
 };

@@ -13,10 +13,11 @@ class UInputMappingContext;
 struct FInputActionValue;
 class UTP_WeaponComponent;
 class UExistsUETestWidgetComponent;
+class UScoreSubsystem;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeath);
+DECLARE_MULTICAST_DELEGATE(FOnDeath);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnHealthChanged, float);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerNameChanged, const FString&);
 
@@ -24,6 +25,8 @@ UCLASS(config=Game)
 class AExistsUETestCharacter : public ACharacter
 {
 	GENERATED_BODY()
+
+	friend UScoreSubsystem;
 
 public:
 	AExistsUETestCharacter();
@@ -48,14 +51,15 @@ public:
 	FOnHealthChanged& GetOnHealthChanged() { return OnHealthChanged; }
 	FOnPlayerNameChanged& GetOnPlayerNameChanged() { return OnPlayerNameChanged; }
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, class AActor* DamageCauser) override;
 
 	UFUNCTION(Server, Reliable)
 	void ServerFire();
 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
 	const FString& GetPlayerName() const { return PlayerName; }
+
+	float GetScore() const { return CurrentScore; }
 
 protected:
 	virtual void BeginPlay() override;
@@ -71,7 +75,6 @@ protected:
 
 	void SetHealth(float InHealth);
 
-	UFUNCTION()
 	void OnCharacterDeath();
 
 	UFUNCTION()
@@ -86,6 +89,12 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void ServerSetPlayerName(const FString& NewPlayerName);
 	
+	UFUNCTION(Client, Reliable)
+	void ClientDemonstarateScores(const TArray<FLogEntry>& Entries);
+
+
+	void AddScore(float Score);
+
 protected:
 	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
 	TObjectPtr<USkeletalMeshComponent> Mesh1P;
@@ -125,6 +134,11 @@ protected:
 
 	UPROPERTY(Replicated, ReplicatedUsing = OnHealthReplicated)
 	float Health;
+	
+	UPROPERTY(Replicated)
+	float CurrentScore;
+
+	bool bIsDead = false;
 
 	FOnDeath OnDeath;
 	FOnHealthChanged OnHealthChanged;

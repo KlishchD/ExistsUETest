@@ -2,9 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/HUD.h"
-#include "AExistsUETestHUD.generated.h"
+#include "ExistsUETestHUD.generated.h"
 
 class UPlayerHUDWidget;
+struct FLogEntry;
 
 UCLASS()
 class EXISTSUETEST_API AExistsUETestHUD : public AHUD
